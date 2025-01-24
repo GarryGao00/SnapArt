@@ -1,3 +1,7 @@
 # Xcode
 *.xcconfig
-!Config.template.xcconfig 
+!Config.template.xcconfig
+*.xcuserstate
+xcuserdata/
+
+# But keep the Config.xcconfig 

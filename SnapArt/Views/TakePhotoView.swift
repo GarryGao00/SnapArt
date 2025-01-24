@@ -8,7 +8,7 @@ struct TakePhotoView: View {
     
     var body: some View {
         ZStack {
-            // Camera preview using the better implementation
+            // Camera preview
             CameraPreviewView(session: viewModel.session)
                 .ignoresSafeArea()
             
@@ -69,6 +69,35 @@ struct CameraPreviewView: UIViewRepresentable {
         var videoPreviewLayer: AVCaptureVideoPreviewLayer {
             return layer as! AVCaptureVideoPreviewLayer
         }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            updateOrientation()
+        }
+        
+        func updateOrientation() {
+            if let connection = videoPreviewLayer.connection {
+                let interfaceOrientation = window?.windowScene?.interfaceOrientation ?? .portrait
+                let angle: Double
+                
+                // The camera's default orientation is landscape right (90 degrees)
+                // So we need to adjust our angles accordingly
+                switch interfaceOrientation {
+                case .portrait:
+                    angle = 90
+                case .portraitUpsideDown:
+                    angle = 270
+                case .landscapeLeft:
+                    angle = 180
+                case .landscapeRight:
+                    angle = 0
+                default:
+                    angle = 90
+                }
+                
+                connection.videoRotationAngle = angle
+            }
+        }
     }
     
     func makeUIView(context: Context) -> VideoPreviewView {
@@ -76,12 +105,13 @@ struct CameraPreviewView: UIViewRepresentable {
         view.backgroundColor = .black
         view.videoPreviewLayer.session = session
         view.videoPreviewLayer.videoGravity = .resizeAspectFill
-        view.videoPreviewLayer.connection?.videoOrientation = .portrait
+        view.updateOrientation()
         return view
     }
     
     func updateUIView(_ uiView: VideoPreviewView, context: Context) {
         uiView.videoPreviewLayer.session = session
+        uiView.updateOrientation()
     }
 }
 

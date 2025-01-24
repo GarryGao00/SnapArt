@@ -5,6 +5,7 @@ struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
     @State private var showingMainContent = false
     @State private var navigateToTakePhoto = false
+    @State private var showingTestView = false
     
     var body: some View {
         NavigationStack {
@@ -33,6 +34,16 @@ struct ContentView: View {
                     Text("Tap logo to start")
                         .font(.subheadline)
                         .foregroundColor(.gray)
+                    
+                    Spacer()
+                    
+                    // Add test button at the bottom
+                    Button(action: { showingTestView = true }) {
+                        Label("Test Art Generation", systemImage: "wand.and.stars.inverse")
+                            .font(.headline)
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.bottom, 20)
                 }
                 .opacity(showingMainContent ? 0 : 1)
                 
@@ -56,7 +67,10 @@ struct ContentView: View {
             .navigationDestination(isPresented: $navigateToTakePhoto) {
                 TakePhotoView()
             }
-            .onChange(of: navigateToTakePhoto) { newValue in
+            .navigationDestination(isPresented: $showingTestView) {
+                TestView()
+            }
+            .onChange(of: navigateToTakePhoto) { oldValue, newValue in
                 if newValue == false {
                     // Reset states when returning from TakePhotoView
                     withAnimation {
