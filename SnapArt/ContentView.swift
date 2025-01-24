@@ -4,61 +4,65 @@ import AVFoundation
 struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
     @State private var showingMainContent = false
+    @State private var navigateToTakePhoto = false
     
     var body: some View {
-        ZStack {
-            // Initial Logo View
-            VStack {
-                Image("SnapArtLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
-                    .cornerRadius(20)
-                    .onTapGesture {
-                        withAnimation {
-                            showingMainContent = true
-                            permissionHandler.checkPermission()
+        NavigationStack {
+            ZStack {
+                // Initial Logo View
+                VStack {
+                    Image("SnapArtLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 200, height: 200)
+                        .cornerRadius(20)
+                        .onTapGesture {
+                            withAnimation {
+                                showingMainContent = true
+                                permissionHandler.checkPermission()
+                                if permissionHandler.cameraPermissionStatus == .authorized {
+                                    navigateToTakePhoto = true
+                                }
+                            }
+                        }
+                    
+                    Text("SnapArt")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Text("Tap logo to start")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+                .opacity(showingMainContent ? 0 : 1)
+                
+                // Camera Permission Content
+                if showingMainContent {
+                    Group {
+                        switch permissionHandler.cameraPermissionStatus {
+                        case .authorized:
+                            Color.clear
+                        case .notDetermined:
+                            RequestCameraView(permissionHandler: permissionHandler)
+                        case .denied, .restricted:
+                            CameraAccessDeniedView()
+                        @unknown default:
+                            Text("Unknown camera permission status")
                         }
                     }
-                
-                Text("SnapArt")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Text("Tap logo to start")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .transition(.opacity)
+                }
             }
-            .opacity(showingMainContent ? 0 : 1)
-            
-            // Camera Permission Content
-            if showingMainContent {
-                Group {
-                    switch permissionHandler.cameraPermissionStatus {
-                    case .authorized:
-                        Button(action: {
-                            // Navigate to TakePhotoView
-                        }) {
-                            VStack(spacing: 20) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 50))
-                                Text("Take Photo")
-                                    .font(.headline)
-                            }
-                            .foregroundColor(.white)
-                            .frame(width: 200, height: 200)
-                            .background(Color.blue)
-                            .cornerRadius(20)
-                        }
-                    case .notDetermined:
-                        RequestCameraView(permissionHandler: permissionHandler)
-                    case .denied, .restricted:
-                        CameraAccessDeniedView()
-                    @unknown default:
-                        Text("Unknown camera permission status")
+            .navigationDestination(isPresented: $navigateToTakePhoto) {
+                TakePhotoView()
+            }
+            .onChange(of: navigateToTakePhoto) { newValue in
+                if newValue == false {
+                    // Reset states when returning from TakePhotoView
+                    withAnimation {
+                        showingMainContent = false
                     }
                 }
-                .transition(.opacity)
             }
         }
     }
