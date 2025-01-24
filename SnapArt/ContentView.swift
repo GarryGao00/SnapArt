@@ -5,13 +5,15 @@ struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
     @State private var showingMainContent = false
     @State private var navigateToTakePhoto = false
-    @State private var showingTestView = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 // Initial Logo View
                 VStack {
+                    
+                    Spacer()
+
                     Image("SnapArtLogo")
                         .resizable()
                         .scaledToFit()
@@ -37,13 +39,12 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    // Add test button at the bottom
-                    Button(action: { showingTestView = true }) {
-                        Label("Test Art Generation", systemImage: "wand.and.stars.inverse")
-                            .font(.headline)
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.bottom, 20)
+                    // Debug view for API key
+                    let prefix = APIKeys.stabilityKey.prefix(5)
+                    Text("API Key (debug): \(String(prefix))...")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                        .padding(.bottom, 8)
                 }
                 .opacity(showingMainContent ? 0 : 1)
                 
@@ -67,9 +68,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $navigateToTakePhoto) {
                 TakePhotoView()
             }
-            .navigationDestination(isPresented: $showingTestView) {
-                TestView()
-            }
+
             .onChange(of: navigateToTakePhoto) { oldValue, newValue in
                 if newValue == false {
                     // Reset states when returning from TakePhotoView
