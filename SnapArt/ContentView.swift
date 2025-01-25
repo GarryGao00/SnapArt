@@ -4,7 +4,7 @@ import AVFoundation
 struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
     @State private var showingMainContent = false
-    @State private var navigateToTakePhoto = false
+    @State private var navigateToThemeSelect = false
     
     var body: some View {
         NavigationStack {
@@ -24,7 +24,7 @@ struct ContentView: View {
                                 showingMainContent = true
                                 permissionHandler.checkPermission()
                                 if permissionHandler.cameraPermissionStatus == .authorized {
-                                    navigateToTakePhoto = true
+                                    navigateToThemeSelect = true
                                 }
                             }
                         }
@@ -65,11 +65,11 @@ struct ContentView: View {
                     .transition(.opacity)
                 }
             }
-            .navigationDestination(isPresented: $navigateToTakePhoto) {
-                TakePhotoView()
+            .navigationDestination(isPresented: $navigateToThemeSelect) {
+                ThemeSelectView()
             }
 
-            .onChange(of: navigateToTakePhoto) { oldValue, newValue in
+            .onChange(of: navigateToThemeSelect) { oldValue, newValue in
                 if newValue == false {
                     // Reset states when returning from TakePhotoView
                     withAnimation {

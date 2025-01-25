@@ -36,10 +36,15 @@ struct TakePhotoView: View {
         .navigationBarBackButtonHidden(true)  // Hide the default back button
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
+                Button(action: { 
+                    dismiss()
+                    // No need to modify the dismiss action since NavigationStack 
+                    // will automatically handle going back to ThemeSelectView
+                }) {
                     Image(systemName: "chevron.left")
                         .foregroundColor(.white)
                         .imageScale(.large)  // Make the button a bit larger
+                        .padding(.leading, 20)
                 }
             }
         }
