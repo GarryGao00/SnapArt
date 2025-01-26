@@ -5,6 +5,7 @@ import Photos
 struct TakePhotoView: View {
     @StateObject private var viewModel = TakePhotoViewModel()
     @Environment(\.dismiss) private var dismiss
+    @State private var showingImagePicker = false
     
     var body: some View {
         ZStack {
@@ -18,53 +19,73 @@ struct TakePhotoView: View {
                     .ignoresSafeArea()
                 
                 // Display captured image
-                VStack {
-                    Image(uiImage: capturedImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: UIScreen.main.bounds.width * 0.8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white, lineWidth: 3)
-                        )
-                        .cornerRadius(12)
-                    
-                    Spacer()
-                    
-                    // Decision buttons
-                    HStack(spacing: 50) {
-                        Button(action: {
-                            viewModel.capturedImage = nil // Reset and retake
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.red)
+                GeometryReader { geometry in
+                    VStack {
+                        Spacer()
+                        
+                        HStack {
+                            Spacer()
+                            Image(uiImage: capturedImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geometry.size.width * 0.8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white, lineWidth: 3)
+                                )
+                                .cornerRadius(12)
+                            Spacer()
                         }
                         
-                        Button(action: {
-                            viewModel.saveToAlbum(capturedImage)
-                            // Here you could also navigate to the next screen
-                            // or show a success message
-                        }) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.green)
+                        Spacer()
+                        
+                        // Decision buttons
+                        HStack(spacing: 50) {
+                            Button(action: {
+                                viewModel.capturedImage = nil // Reset and retake
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.red)
+                            }
+                            
+                            Button(action: {
+                                viewModel.saveToAlbum(capturedImage)
+                            }) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.green)
+                            }
                         }
+                        .padding(.bottom, 50)
                     }
-                    .padding(.bottom, 50)
                 }
             } else {
-                // Capture button
+                // Camera controls
                 VStack {
                     Spacer()
                     
-                    Button(action: viewModel.capturePhoto) {
-                        Circle()
-                            .stroke(Color.white, lineWidth: 3)
-                            .frame(width: 70, height: 70)
-                            .background(Circle().fill(Color.white.opacity(0.2)))
-                            .padding(.bottom, 30)
+                    HStack(spacing: 50) {
+                        // Photo library button
+                        Button(action: { showingImagePicker = true }) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .font(.system(size: 30))
+                                .foregroundColor(.white)
+                        }
+                        
+                        // Capture button
+                        Button(action: viewModel.capturePhoto) {
+                            Circle()
+                                .stroke(Color.white, lineWidth: 3)
+                                .frame(width: 70, height: 70)
+                                .background(Circle().fill(Color.white.opacity(0.2)))
+                        }
+                        
+                        // Empty view for symmetry
+                        Color.clear
+                            .frame(width: 30, height: 30)
                     }
+                    .padding(.bottom, 30)
                 }
             }
             
@@ -86,6 +107,9 @@ struct TakePhotoView: View {
                         .padding(.leading, 20)
                 }
             }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(selectedImage: $viewModel.capturedImage)
         }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") { }
@@ -293,6 +317,44 @@ extension TakePhotoViewModel: AVCapturePhotoCaptureDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = image
             // No longer automatically saving to album
+        }
+    }
+}
+
+// Add this ImagePicker struct
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var selectedImage: UIImage?
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .photoLibrary
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePicker
+        
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.selectedImage = image
+            }
+            parent.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
         }
     }
 }
