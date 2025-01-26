@@ -6,6 +6,7 @@ struct TakePhotoView: View {
     @StateObject private var viewModel = TakePhotoViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showingImagePicker = false
+    @State private var navigateToProcess = false
     
     var body: some View {
         ZStack {
@@ -50,7 +51,7 @@ struct TakePhotoView: View {
                             }
                             
                             Button(action: {
-                                viewModel.saveToAlbum(capturedImage)
+                                navigateToProcess = true
                             }) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 60))
@@ -121,6 +122,11 @@ struct TakePhotoView: View {
         }
         .onDisappear {
             viewModel.stopSession()
+        }
+        .navigationDestination(isPresented: $navigateToProcess) {
+            if let image = viewModel.capturedImage {
+                ProcessPhotoView(image: image)
+            }
         }
     }
 }
