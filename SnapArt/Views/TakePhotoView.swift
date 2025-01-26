@@ -12,16 +12,59 @@ struct TakePhotoView: View {
             CameraPreviewView(session: viewModel.session)
                 .ignoresSafeArea()
             
-            // Capture button
-            VStack {
-                Spacer()
+            if let capturedImage = viewModel.capturedImage {
+                // Review overlay
+                Color.black.opacity(0.8)
+                    .ignoresSafeArea()
                 
-                Button(action: viewModel.capturePhoto) {
-                    Circle()
-                        .stroke(Color.gray, lineWidth: 3)
-                        .frame(width: 70, height: 70)
-                        .background(Circle().fill(Color.white.opacity(0.2)))
-                        .padding(.bottom, 30)
+                // Display captured image
+                VStack {
+                    Image(uiImage: capturedImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: UIScreen.main.bounds.width * 0.8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white, lineWidth: 3)
+                        )
+                        .cornerRadius(12)
+                    
+                    Spacer()
+                    
+                    // Decision buttons
+                    HStack(spacing: 50) {
+                        Button(action: {
+                            viewModel.capturedImage = nil // Reset and retake
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.red)
+                        }
+                        
+                        Button(action: {
+                            viewModel.saveToAlbum(capturedImage)
+                            // Here you could also navigate to the next screen
+                            // or show a success message
+                        }) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.green)
+                        }
+                    }
+                    .padding(.bottom, 50)
+                }
+            } else {
+                // Capture button
+                VStack {
+                    Spacer()
+                    
+                    Button(action: viewModel.capturePhoto) {
+                        Circle()
+                            .stroke(Color.white, lineWidth: 3)
+                            .frame(width: 70, height: 70)
+                            .background(Circle().fill(Color.white.opacity(0.2)))
+                            .padding(.bottom, 30)
+                    }
                 }
             }
             
@@ -33,17 +76,13 @@ struct TakePhotoView: View {
                     .animation(.linear(duration: 0.4), value: viewModel.showFlash)
             }
         }
-        .navigationBarBackButtonHidden(true)  // Hide the default back button
+        .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { 
-                    dismiss()
-                    // No need to modify the dismiss action since NavigationStack 
-                    // will automatically handle going back to ThemeSelectView
-                }) {
+                Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
                         .foregroundColor(.white)
-                        .imageScale(.large)  // Make the button a bit larger
+                        .imageScale(.large)
                         .padding(.leading, 20)
                 }
             }
@@ -207,7 +246,7 @@ class TakePhotoViewModel: NSObject, ObservableObject {
         }
     }
     
-    private func saveToAlbum(_ image: UIImage) {
+    func saveToAlbum(_ image: UIImage) {
         PHPhotoLibrary.requestAuthorization { [weak self] status in
             guard status == .authorized else {
                 DispatchQueue.main.async {
@@ -224,6 +263,9 @@ class TakePhotoViewModel: NSObject, ObservableObject {
                     if !success {
                         self?.showError = true
                         self?.errorMessage = error?.localizedDescription ?? "Unable to save photo"
+                    } else {
+                        // Reset the captured image after successful save
+                        self?.capturedImage = nil
                     }
                 }
             }
@@ -250,7 +292,7 @@ extension TakePhotoViewModel: AVCapturePhotoCaptureDelegate {
         
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = image
-            self?.saveToAlbum(image)
+            // No longer automatically saving to album
         }
     }
 }
