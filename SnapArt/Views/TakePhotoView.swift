@@ -122,7 +122,14 @@ struct TakePhotoView: View {
             viewModel.checkPermissionsAndSetupSession()
         }
         .onDisappear {
-            viewModel.stopSession()
+            if !navigateToProcess {
+                viewModel.stopSession()
+            }
+        }
+        .onChange(of: navigateToProcess) { oldValue, newValue in
+            if !newValue {
+                viewModel.startSession()
+            }
         }
         .navigationDestination(isPresented: $navigateToProcess) {
             if let image = viewModel.capturedImage {
@@ -198,6 +205,7 @@ class TakePhotoViewModel: NSObject, ObservableObject {
     @Published var capturedImage: UIImage?
     
     private let photoOutput = AVCapturePhotoOutput()
+    private var isSessionConfigured = false
     
     override init() {
         super.init()
@@ -206,13 +214,17 @@ class TakePhotoViewModel: NSObject, ObservableObject {
     func checkPermissionsAndSetupSession() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            setupCaptureSession()
+            if !isSessionConfigured {
+                setupCaptureSession()
+            }
             startSession()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 if granted {
                     DispatchQueue.main.async {
-                        self?.setupCaptureSession()
+                        if !(self?.isSessionConfigured ?? false) {
+                            self?.setupCaptureSession()
+                        }
                         self?.startSession()
                     }
                 }
@@ -252,15 +264,18 @@ class TakePhotoViewModel: NSObject, ObservableObject {
         
         session.addOutput(photoOutput)
         session.commitConfiguration()
+        isSessionConfigured = true
     }
     
     func startSession() {
+        guard !session.isRunning else { return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.session.startRunning()
         }
     }
     
     func stopSession() {
+        guard session.isRunning else { return }
         session.stopRunning()
     }
     
