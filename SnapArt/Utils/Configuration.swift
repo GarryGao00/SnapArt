@@ -44,7 +44,7 @@ enum Configuration {
             throw Error.missingKey
         }
 
-        print("✅ Found value for \(key): \(value)")
+        print("✅ Found value for \(key)")
 
         // Convert the value to the required type
         switch T.self {

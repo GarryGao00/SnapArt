@@ -29,7 +29,7 @@ enum AIService {
                                    prompt: String = "whimsical watercolor style using pastel colors, gentle brush strokes, and soft, diffused outlines.",
                                    controlStrength: Float = 0.7) async throws -> UIImage {
         // Debug print API key
-        print("Using Stability API Key: \(APIKeys.stabilityKey)")
+        print("Using Stability API Key: \(APIKeys.stabilityKey.prefix(7))...")
         
         // Prepare URL and request
         guard let url = URL(string: "https://api.stability.ai/v2beta/stable-image/control/structure") else {
