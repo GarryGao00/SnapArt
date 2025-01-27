@@ -7,6 +7,7 @@ struct TakePhotoView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingImagePicker = false
     @State private var navigateToProcess = false
+    @AppStorage("selectedTheme") private var selectedTheme: ArtStyle = .whimsicalWatercolor
     
     var body: some View {
         ZStack {
@@ -125,7 +126,7 @@ struct TakePhotoView: View {
         }
         .navigationDestination(isPresented: $navigateToProcess) {
             if let image = viewModel.capturedImage {
-                ProcessPhotoView(image: image)
+                ProcessPhotoView(image: image, selectedTheme: selectedTheme)
             }
         }
     }
