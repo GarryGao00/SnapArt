@@ -78,6 +78,12 @@ struct ContentView: View {
                 }
             }
         }
+        .onAppear {
+            Logger.log("Entered ContentView")
+        }
+        .onDisappear {
+            Logger.log("Exited ContentView")
+        }
     }
 }
 

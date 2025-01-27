@@ -129,30 +129,40 @@ struct ProcessPhotoView: View {
         .task {
             await processImage()
         }
+        .onAppear {
+            Logger.log("Entered ProcessPhotoView")
+        }
+        .onDisappear {
+            Logger.log("Exited ProcessPhotoView")
+        }
     }
     
     private func processImage() async {
+        Logger.log("Starting image processing")
         isProcessing = true
         errorMessage = nil
         
         do {
+            Logger.log("Calling Stability AI API")
             processedImage = try await AIService.generateArtFromImage(
                 image,
                 prompt: selectedTheme.prompt,
                 controlStrength: 0.7
             )
+            Logger.log("Successfully received processed image")
         } catch let error as AIService.AIError {
+            Logger.log("AI Service error: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
-            print("AI Service error: \(error.localizedDescription)")
         } catch {
+            Logger.log("Unexpected error: \(error)")
             errorMessage = "Unexpected error occurred"
-            print("Unexpected error: \(error)")
         }
         
         isProcessing = false
     }
     
     private func saveImageToAlbum(_ image: UIImage) {
+        Logger.log("Saving image to album")
         // Convert WebP to PNG/JPEG data
         guard let imageData = image.pngData(),
               let convertedImage = UIImage(data: imageData) else {
@@ -163,9 +173,11 @@ struct ProcessPhotoView: View {
         
         imageSaver = ImageSaver(
             onSuccess: {
+                Logger.log("Successfully saved image to album")
                 showingSaveSuccess = true
             },
             onError: { error in
+                Logger.log("Failed to save image: \(error.localizedDescription)")
                 showingSaveError = true
                 saveErrorMessage = error.localizedDescription
             }

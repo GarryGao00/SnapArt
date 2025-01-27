@@ -119,9 +119,11 @@ struct TakePhotoView: View {
             Text(viewModel.errorMessage)
         }
         .onAppear {
+            Logger.log("Entered TakePhotoView")
             viewModel.checkPermissionsAndSetupSession()
         }
         .onDisappear {
+            Logger.log("Exited TakePhotoView")
             if !navigateToProcess {
                 viewModel.stopSession()
             }
@@ -269,6 +271,7 @@ class TakePhotoViewModel: NSObject, ObservableObject {
     
     func startSession() {
         guard !session.isRunning else { return }
+        Logger.log("Starting camera session")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.session.startRunning()
         }
@@ -276,10 +279,12 @@ class TakePhotoViewModel: NSObject, ObservableObject {
     
     func stopSession() {
         guard session.isRunning else { return }
+        Logger.log("Stopping camera session")
         session.stopRunning()
     }
     
     func capturePhoto() {
+        Logger.log("Taking photo")
         let settings = AVCapturePhotoSettings()
         photoOutput.capturePhoto(with: settings, delegate: self)
         
@@ -369,6 +374,7 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            Logger.log("Photo selected from library")
             if let image = info[.originalImage] as? UIImage {
                 parent.selectedImage = image
             }

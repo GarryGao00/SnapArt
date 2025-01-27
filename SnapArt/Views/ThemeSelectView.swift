@@ -17,6 +17,7 @@ struct ThemeSelectView: View {
                         if buttonIndex < ArtStyle.allCases.count {
                             let style = ArtStyle.allCases[buttonIndex]
                             ThemeButton(style: style) {
+                                Logger.log("Theme selected: \(style.title), prompt: \(style.prompt)")
                                 selectedTheme = style
                                 navigateToCamera = true
                             }
@@ -43,6 +44,12 @@ struct ThemeSelectView: View {
                         .padding(.leading, 20)
                 }
             }
+        }
+        .onAppear {
+            Logger.log("Entered ThemeSelectView")
+        }
+        .onDisappear {
+            Logger.log("Exited ThemeSelectView")
         }
     }
 }

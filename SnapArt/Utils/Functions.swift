@@ -28,6 +28,9 @@ enum AIService {
     static func generateArtFromImage(_ image: UIImage, 
                                    prompt: String = "whimsical watercolor style using pastel colors, gentle brush strokes, and soft, diffused outlines.",
                                    controlStrength: Float = 0.7) async throws -> UIImage {
+        Logger.log("Starting art generation")
+        Logger.log("Using prompt: \(prompt)")
+        
         // Debug print API key
         print("Using Stability API Key: \(APIKeys.stabilityKey.prefix(7))...")
         
@@ -85,10 +88,11 @@ enum AIService {
         
         // Print response for debugging
         if let responseString = String(data: data, encoding: .utf8) {
-            print("API Response: \(responseString)")
+            Logger.log("API Response: \(responseString)")
         }
         
         guard httpResponse.statusCode == 200 else {
+            Logger.log("API request failed with status code: \(httpResponse.statusCode)")
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = errorJson["message"] as? String {
                 throw AIError.imageGenerationFailed(message)
@@ -101,6 +105,7 @@ enum AIService {
             throw AIError.invalidImageData
         }
         
+        Logger.log("Successfully generated art")
         return generatedImage
     }
 }
