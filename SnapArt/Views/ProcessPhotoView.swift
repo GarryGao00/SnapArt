@@ -32,109 +32,113 @@ struct ProcessPhotoView: View {
     @State private var imageSaver: ImageSaver?
     
     var body: some View {
-        ZStack {
-            // Show either original or processed image full screen
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .edgesIgnoringSafeArea(.all)
-            
-            if let processedImage {
-                Image(uiImage: processedImage)
+        GeometryReader { geometry in
+            ZStack {
+                Image(uiImage: image)
                     .resizable()
-                    .scaledToFill()
-                    .edgesIgnoringSafeArea(.all)
-            }
-            
-            VStack {
-                Spacer()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
                 
-                // Test window
-                VStack(spacing: 12) {
-                    // Processing indicator
-                    if isProcessing {
-                        ZStack {
+                if let processedImage {
+                    Image(uiImage: processedImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                }
+                
+                VStack {
+                    Spacer()
+                    
+                    // Test window
+                    VStack(spacing: 12) {
+                        // Processing indicator
+                        if isProcessing {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.black.opacity(0.7))
+                                    .frame(width: 120, height: 120)
+                                
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                        }
+                        
+                        // Error message if any
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        // Theme information
+                        VStack(spacing: 8) {
+                            Text(selectedTheme.title)
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            
+                            Text(selectedTheme.prompt)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding()
+                        .background(
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color.black.opacity(0.7))
-                                .frame(width: 120, height: 120)
-                            
-                            ProgressView()
-                                .tint(.white)
-                        }
+                        )
                     }
-                    
-                    // Error message if any
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    // Theme information
-                    VStack(spacing: 8) {
-                        Text(selectedTheme.title)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        Text(selectedTheme.prompt)
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.black.opacity(0.7))
-                    )
-                }
-                .padding(.bottom, 50)
-            }
-        }
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
-                        .imageScale(.large)
-                        .padding(.leading, 20)
+                    .padding(.bottom, 50)
                 }
             }
-            
-            if let processedImage {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        saveImageToAlbum(processedImage)
-                    }) {
-                        Image(systemName: "square.and.arrow.down")
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
                             .foregroundColor(.white)
                             .imageScale(.large)
-                            .padding(.trailing, 20)
+                            .padding(.leading, 20)
+                    }
+                }
+                
+                if let processedImage {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            saveImageToAlbum(processedImage)
+                        }) {
+                            Image(systemName: "square.and.arrow.down")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding(.trailing, 20)
+                        }
                     }
                 }
             }
+            .alert("Image Saved!", isPresented: $showingSaveSuccess) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("The image has been saved to your photo library.")
+            }
+            .alert("Save Failed", isPresented: $showingSaveError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(saveErrorMessage)
+            }
+            .task {
+                await processImage()
+            }
+            .onAppear {
+                Logger.log("Entered ProcessPhotoView")
+            }
+            .onDisappear {
+                Logger.log("Exited ProcessPhotoView")
+            }
         }
-        .alert("Image Saved!", isPresented: $showingSaveSuccess) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("The image has been saved to your photo library.")
-        }
-        .alert("Save Failed", isPresented: $showingSaveError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(saveErrorMessage)
-        }
-        .task {
-            await processImage()
-        }
-        .onAppear {
-            Logger.log("Entered ProcessPhotoView")
-        }
-        .onDisappear {
-            Logger.log("Exited ProcessPhotoView")
-        }
+        .ignoresSafeArea()
     }
     
     private func processImage() async {
@@ -142,22 +146,33 @@ struct ProcessPhotoView: View {
         isProcessing = true
         errorMessage = nil
         
-        do {
-            Logger.log("Calling Stability AI API")
-            processedImage = try await AIService.generateArtFromImage(
-                image,
-                prompt: selectedTheme.prompt,
-                controlStrength: 0.7
-            )
-            Logger.log("Successfully received processed image")
-        } catch let error as AIService.AIError {
-            Logger.log("AI Service error: \(error.localizedDescription)")
-            errorMessage = error.localizedDescription
-        } catch {
-            Logger.log("Unexpected error: \(error)")
-            errorMessage = "Unexpected error occurred"
-        }
+        // do {
+        //     Logger.log("Calling Stability AI API")
+        //     processedImage = try await AIService.generateArtFromImage(
+        //         image,
+        //         prompt: selectedTheme.prompt,
+        //         controlStrength: 0.7
+        //     )
+        //     Logger.log("Successfully received processed image")
+        // } catch let error as AIService.AIError {
+        //     Logger.log("AI Service error: \(error.localizedDescription)")
+        //     errorMessage = error.localizedDescription
+        // } catch {
+        //     Logger.log("Unexpected error: \(error)")
+        //     errorMessage = "Unexpected error occurred"
+        // }
         
+        // Simulate processing delay
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+        
+        if let testImage = UIImage(named: "temp_screen") {
+            processedImage = testImage
+            Logger.log("Successfully loaded test image")
+        } else {
+            Logger.log("Failed to load test image")
+            errorMessage = "Failed to load test image"
+        }
+
         isProcessing = false
     }
     
