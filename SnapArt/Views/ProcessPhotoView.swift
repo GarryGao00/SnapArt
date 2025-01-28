@@ -46,6 +46,8 @@ struct ProcessPhotoView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
+                        .opacity(isProcessing ? 0 : 1) // Start at 0 opacity when processing
+                        .animation(.easeInOut(duration: 0.5), value: isProcessing) // Animate opacity changes
                 }
                 
                 VStack {
@@ -168,12 +170,15 @@ struct ProcessPhotoView: View {
         if let testImage = UIImage(named: "temp_screen") {
             processedImage = testImage
             Logger.log("Successfully loaded test image")
+            
+            // Small delay to ensure animation setup
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second delay
+            isProcessing = false
         } else {
             Logger.log("Failed to load test image")
             errorMessage = "Failed to load test image"
+            isProcessing = false
         }
-
-        isProcessing = false
     }
     
     private func saveImageToAlbum(_ image: UIImage) {
