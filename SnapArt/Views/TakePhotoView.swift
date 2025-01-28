@@ -130,7 +130,11 @@ struct TakePhotoView: View {
         }
         .onChange(of: navigateToProcess) { oldValue, newValue in
             if !newValue {
+                // When returning from ProcessPhotoView
                 viewModel.startSession()
+                viewModel.capturedImage = nil  // Reset the captured image
+                showingImagePicker = false     // Ensure image picker is hidden
+                Logger.log("Reset camera view state after returning from ProcessPhotoView")
             }
         }
         .navigationDestination(isPresented: $navigateToProcess) {
