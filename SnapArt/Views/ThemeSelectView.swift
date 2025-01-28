@@ -69,8 +69,10 @@ struct ThemeButton: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
-                style.backgroundColor
-                    .opacity(0.7)
+                Image(style.rawValue)
+                    .resizable()
+                    .scaledToFill()
+                    .overlay(Color.black.opacity(0.4)) // Darkens the image for better text readability
             )
             .cornerRadius(8)
         }
