@@ -5,22 +5,37 @@ struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
     @State private var showingMainContent = false
     @State private var navigateToThemeSelect = false
+    @State private var showHint = false
+    @State private var fadeOutContent = false
     
     var body: some View {
         NavigationStack {
             ZStack {
+                // Add a clear full screen button to detect taps
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeIn(duration: 0.05)) {
+                            showHint = true
+                        }
+                    }
+                
                 // Initial Logo View
                 VStack {
-                    
                     Spacer()
-
+                    
                     Image("SnapArtLogo")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 200, height: 200)
                         .cornerRadius(20)
                         .onTapGesture {
-                            withAnimation {
+                            Logger.log("Logo tapped, navigating to theme selection")
+                            showHint = false  // Hide the hint text immediately
+                            withAnimation(.easeOut(duration: 0.1)) {
+                                fadeOutContent = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 showingMainContent = true
                                 permissionHandler.checkPermission()
                                 if permissionHandler.cameraPermissionStatus == .authorized {
@@ -36,6 +51,8 @@ struct ContentView: View {
                     Text("Tap logo to start")
                         .font(.subheadline)
                         .foregroundColor(.gray)
+                        .opacity(showHint ? 1 : 0)
+                        .animation(.easeIn(duration: 0.5), value: showHint)
                     
                     Spacer()
                     
@@ -46,6 +63,7 @@ struct ContentView: View {
                         .foregroundColor(.gray)
                         .padding(.bottom, 8)
                 }
+                .opacity(fadeOutContent ? 0 : 1)
                 .opacity(showingMainContent ? 0 : 1)
                 
                 // Camera Permission Content
@@ -68,18 +86,20 @@ struct ContentView: View {
             .navigationDestination(isPresented: $navigateToThemeSelect) {
                 ThemeSelectView()
             }
-
             .onChange(of: navigateToThemeSelect) { oldValue, newValue in
                 if newValue == false {
-                    // Reset states when returning from TakePhotoView
                     withAnimation {
                         showingMainContent = false
+                        fadeOutContent = false
+                        showHint = false
                     }
                 }
             }
         }
         .onAppear {
             Logger.log("Entered ContentView")
+            showHint = false
+            fadeOutContent = false
         }
         .onDisappear {
             Logger.log("Exited ContentView")
