@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import Photos
 
 struct ContentView: View {
     @StateObject private var permissionHandler = CameraPermissionHandler()
@@ -22,6 +23,7 @@ struct ContentView: View {
                         }
                     }
                 
+                
                 // Initial Logo View
                 VStack {
                     Spacer()
@@ -35,11 +37,15 @@ struct ContentView: View {
                             let impactMed = UIImpactFeedbackGenerator(style: .medium)
                             impactMed.impactOccurred()
                             Logger.log("Logo tapped, navigating to theme selection")
-                            showHint = false  // Hide the hint text immediately
-                            withAnimation(.easeOut(duration: 0.1)) {
+                            showHint = false
+                            
+                            // Immediately start fade out
+                            withAnimation {
                                 fadeOutContent = true
                             }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            
+                            // Navigate after fade completes
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                 showingMainContent = true
                                 permissionHandler.checkPermission()
                                 if permissionHandler.cameraPermissionStatus == .authorized {
@@ -67,15 +73,18 @@ struct ContentView: View {
                     //     .foregroundColor(.gray)
                     //     .padding(.bottom, 8)
                 }
-                .opacity(fadeOutContent ? 0 : 1)
                 .opacity(showingMainContent ? 0 : 1)
-                
+
                 // Camera Permission Content
                 if showingMainContent {
                     Group {
                         switch permissionHandler.cameraPermissionStatus {
                         case .authorized:
-                            Color.clear
+                            if permissionHandler.photoLibraryStatus == .authorized {
+                                Color.clear
+                            } else {
+                                RequestCameraView(permissionHandler: permissionHandler)
+                            }
                         case .notDetermined:
                             RequestCameraView(permissionHandler: permissionHandler)
                         case .denied, .restricted:
@@ -86,9 +95,25 @@ struct ContentView: View {
                     }
                     .transition(.opacity)
                 }
+                
+                // White overlay for fade out effect (moved to end of ZStack)
+                Color.white
+                    .opacity(fadeOutContent ? 1 : 0)
+                    .animation(.easeIn(duration: 0.25), value: fadeOutContent)
+                    .ignoresSafeArea(.all, edges: .all)  // Updated to cover all edges
             }
             .navigationDestination(isPresented: $navigateToThemeSelect) {
                 ThemeSelectView()
+            }
+            .onChange(of: permissionHandler.cameraPermissionStatus) { _, newValue in
+                if newValue == .authorized && permissionHandler.photoLibraryStatus == .authorized {
+                    navigateToThemeSelect = true
+                }
+            }
+            .onChange(of: permissionHandler.photoLibraryStatus) { _, newValue in
+                if newValue == .authorized && permissionHandler.cameraPermissionStatus == .authorized {
+                    navigateToThemeSelect = true
+                }
             }
             .onChange(of: navigateToThemeSelect) { oldValue, newValue in
                 if newValue == false {
@@ -168,15 +193,25 @@ struct ContentView: View {
 // Camera permission handling view models
 class CameraPermissionHandler: ObservableObject {
     @Published var cameraPermissionStatus: AVAuthorizationStatus = .notDetermined
+    @Published var photoLibraryStatus: PHAuthorizationStatus = .notDetermined
     
     func checkPermission() {
         cameraPermissionStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        photoLibraryStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     }
     
     func requestPermission() {
+        // Request camera permission
         AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
             DispatchQueue.main.async {
                 self?.cameraPermissionStatus = granted ? .authorized : .denied
+            }
+        }
+        
+        // Request photo library permission
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
+            DispatchQueue.main.async {
+                self?.photoLibraryStatus = status
             }
         }
     }
@@ -192,16 +227,16 @@ struct RequestCameraView: View {
                 .font(.system(size: 70))
                 .foregroundColor(.blue)
             
-            Text("Camera Access Required")
+            Text("Camera & Photo Access Required")
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text("SnapArt needs access to your camera to transform your photos into art.")
+            Text("SnapArt needs access to your camera to take photos and photo library to save your artistic creations.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
             
-            Button("Allow Camera Access") {
+            Button("Allow Access") {
                 permissionHandler.requestPermission()
             }
             .buttonStyle(.borderedProminent)
