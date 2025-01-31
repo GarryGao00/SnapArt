@@ -24,27 +24,47 @@ SnapArt is an iOS application that transforms your photos into various artistic 
   - AVFoundation for camera handling
   - PhotoKit for photo library access
 
-## Architecture
-
-The app follows a clean architecture pattern with:
-- **Views**: SwiftUI views for user interface
-- **ViewModels**: Business logic and state management
-- **Services**: API integration and image processing
-- **Configuration**: Secure API key management
-
-## Setup
+## Setup Instructions
 
 1. Clone the repository
-2. Add your Stability AI API key to `Config.xcconfig`
+2. Set up API keys:
+   - Copy `Config.template.xcconfig` to `Config.xcconfig`
+   - Get your API key from [Stability AI](https://platform.stability.ai/)
+   - Replace the placeholder in `Config.xcconfig` with your actual API key
 3. Build and run in Xcode
 
-## Configuration
+⚠️ **Important**: Never commit your `Config.xcconfig` file to version control. It's already added to `.gitignore` to prevent accidental commits.
 
-The app requires a Stability AI API key. 
+## Security Considerations
+
+- API keys are stored locally in `Config.xcconfig` and UserDefaults
+- The app uses secure HTTPS connections for all API calls
+- Camera and photo library permissions are requested at runtime
+- No user data is stored on remote servers
+- All image processing is done through Stability AI's secure API
 
 ## Privacy
 
-The app requires camera and photo library permissions for basic functionality. These permissions are requested at runtime and can be managed in the device's Settings app.
+The app requires:
+- Camera access for taking photos
+- Photo library access for saving processed images
+- Internet access for API communication
+
+No data is collected or shared beyond what's necessary for image processing.
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+Please ensure you don't commit any API keys or sensitive information.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Credits
 
