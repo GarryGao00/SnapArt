@@ -146,6 +146,9 @@ struct ProcessPhotoView: View {
                 }
                 
                 await processImage()
+                
+                // Add this line to ensure processing state is updated
+                isProcessing = false
             }
             .onAppear {
                 Logger.log("Entered ProcessPhotoView")
@@ -162,37 +165,84 @@ struct ProcessPhotoView: View {
         isProcessing = true
         errorMessage = nil
         
-        // do {
-        //     Logger.log("Calling Stability AI API")
-        //     processedImage = try await AIService.generateArtFromImage(
-        //         image,
-        //         prompt: selectedTheme.prompt,
-        //         controlStrength: 0.7
-        //     )
-        //     Logger.log("Successfully received processed image")
-        // } catch let error as AIService.AIError {
-        //     Logger.log("AI Service error: \(error.localizedDescription)")
-        //     errorMessage = error.localizedDescription
-        // } catch {
-        //     Logger.log("Unexpected error: \(error)")
-        //     errorMessage = "Unexpected error occurred"
-        // }
-        
-        // Simulate processing delay
-        try? await Task.sleep(nanoseconds: 4_000_000_000) // 1 second delay
-        
-        if let testImage = UIImage(named: "temp_screen") {
-            processedImage = testImage
-            Logger.log("Successfully loaded test image")
+        do {
+            Logger.log("Compressing image if needed")
+            let compressedImage = compressImage(image, maxSizeInMB: 1.0)
             
-            // Small delay to ensure animation setup
-            try? await Task.sleep(nanoseconds: 10_000_000) // 0.01 second delay
-            isProcessing = false
-        } else {
-            Logger.log("Failed to load test image")
-            errorMessage = "Failed to load test image"
-            isProcessing = false
+            Logger.log("Calling Stability AI API")
+            let processed = try await AIService.generateArtFromImage(
+                compressedImage,
+                prompt: selectedTheme.prompt,
+                controlStrength: 0.7
+            )
+            Logger.log("Successfully received processed image")
+            
+            await MainActor.run {
+                processedImage = processed
+            }
+        } catch let error as AIService.AIError {
+            Logger.log("AI Service error: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        } catch {
+            Logger.log("Unexpected error: \(error)")
+            errorMessage = "Unexpected error occurred"
         }
+    }
+    
+    private func compressImage(_ image: UIImage, maxSizeInMB: Double) -> UIImage {
+        let maxSizeInBytes = Int(maxSizeInMB * 1024 * 1024) // Convert MB to bytes
+        var compression: CGFloat = 1.0
+        let step: CGFloat = 0.1
+        
+        // Get initial data with maximum quality
+        guard var imageData = image.jpegData(compressionQuality: compression) else {
+            Logger.log("Failed to get image data, returning original image")
+            return image
+        }
+        
+        Logger.log("Original image size: \(Double(imageData.count) / 1024 / 1024)MB")
+        
+        // Check if already under max size
+        if imageData.count <= maxSizeInBytes {
+            Logger.log("Image already under size limit")
+            return image
+        }
+        
+        // Compress until the image is under maxSizeInBytes
+        while imageData.count > maxSizeInBytes && compression > step {
+            compression -= step
+            if let compressedData = image.jpegData(compressionQuality: compression) {
+                imageData = compressedData
+            }
+        }
+        
+        // If still too large, resize the image
+        if imageData.count > maxSizeInBytes {
+            Logger.log("Compression alone not sufficient, resizing image")
+            let scale = sqrt(Double(maxSizeInBytes) / Double(imageData.count))
+            let newSize = CGSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+            
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            
+            if let finalImage = resizedImage {
+                Logger.log("Image resized to: \(newSize)")
+                return finalImage
+            }
+        }
+        
+        if let finalImage = UIImage(data: imageData) {
+            Logger.log("Final compressed image size: \(Double(imageData.count) / 1024 / 1024)MB")
+            return finalImage
+        }
+        
+        Logger.log("Compression failed, returning original image")
+        return image
     }
     
     private func saveImageToAlbum(_ image: UIImage) {
