@@ -72,10 +72,24 @@ enum APIKeys {
         if let cached = cachedStabilityKey {
             return cached
         }
+        // First try to get from UserDefaults
+        if let savedKey = UserDefaults.standard.string(forKey: "STABILITY_KEY"), !savedKey.isEmpty {
+            Logger.log("Retrieved Stability API Key from UserDefaults")
+            cachedStabilityKey = savedKey
+            return savedKey
+        }
+        // If not in UserDefaults, get from config file
         let key = (try? Configuration.value(for: "STABILITY_KEY")) ?? ""
         cachedStabilityKey = key
         Logger.log("Stability API Key cached (length: \(key.count))")
         return key
+    }
+    
+    // Add a setter for the stability key
+    static func setStabilityKey(_ key: String) {
+        UserDefaults.standard.set(key, forKey: "STABILITY_KEY")
+        cachedStabilityKey = key
+        Logger.log("Saved new Stability API Key to UserDefaults")
     }
     
     static var openAIKey: String {

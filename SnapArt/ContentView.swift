@@ -7,6 +7,8 @@ struct ContentView: View {
     @State private var navigateToThemeSelect = false
     @State private var showHint = false
     @State private var fadeOutContent = false
+    @State private var showingSettings = false
+    @State private var stabilityKey = ""
     
     var body: some View {
         NavigationStack {
@@ -96,6 +98,60 @@ struct ContentView: View {
                         showHint = false
                     }
                 }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .medium)
+                        impact.impactOccurred()
+                        showingSettings = true
+                    }) {
+                        Image(systemName: "gearshape")
+                            .foregroundColor(.gray)
+                            .scaleEffect(0.8)
+                            .padding(.horizontal, 20)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    VStack(alignment: .leading, spacing: 20) {
+                        let prefix = APIKeys.stabilityKey.prefix(7)
+                        Text("Current API Key: \(String(prefix))... \nPaste your Stability AI Key Here. ")
+                            .foregroundColor(.gray)
+                            .padding(.horizontal)
+                        
+                        TextField("Format: sk-...", text: $stabilityKey, axis: .vertical)
+                            .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.none)
+                            .autocorrectionDisabled()
+                            .frame(height: 70)
+                            .padding(.horizontal)
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 20)
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                stabilityKey = ""  // Reset the input
+                                showingSettings = false
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                if !stabilityKey.isEmpty {
+                                    APIKeys.setStabilityKey(stabilityKey)
+                                }
+                                stabilityKey = ""  // Reset the input
+                                showingSettings = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
             }
         }
         .onAppear {
