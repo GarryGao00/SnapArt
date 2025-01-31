@@ -31,6 +31,76 @@ struct ProcessPhotoView: View {
     @State private var saveErrorMessage = ""
     @State private var imageSaver: ImageSaver?
     @State private var originalImageOpacity: Double = 1.0
+    @State private var compressedImage: UIImage
+    
+    init(image: UIImage, selectedTheme: ArtStyle) {
+        self.image = image
+        self.selectedTheme = selectedTheme
+        // Initialize compressed image
+        _compressedImage = State(initialValue: ProcessPhotoView.compressImage(image, maxSizeInMB: 1.0))
+    }
+    
+    // Make compressImage static so it can be used in init
+    private static func compressImage(_ image: UIImage, maxSizeInMB: Double) -> UIImage {
+        let maxPixels = 9_000_000 // Slightly under Stability AI's limit of 9,437,184 pixels
+        let currentPixels = Int(image.size.width * image.size.height)
+        
+        // First check if we need to resize due to pixel count
+        var workingImage = image
+        if currentPixels > maxPixels {
+            Logger.log("Image exceeds maximum pixel count. Current: \(currentPixels), Max: \(maxPixels)")
+            let scale = sqrt(Double(maxPixels) / Double(currentPixels))
+            let newSize = CGSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+            
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            if let resizedImage = UIGraphicsGetImageFromCurrentImageContext() {
+                workingImage = resizedImage
+            }
+            UIGraphicsEndImageContext()
+            Logger.log("Resized image to: \(newSize)")
+        }
+        
+        // Then handle file size compression
+        let maxSizeInBytes = Int(maxSizeInMB * 1024 * 1024)
+        var compression: CGFloat = 1.0
+        let step: CGFloat = 0.1
+        
+        // Get initial data with maximum quality
+        guard var imageData = workingImage.jpegData(compressionQuality: compression) else {
+            Logger.log("Failed to get image data, returning working image")
+            return workingImage
+        }
+        
+        Logger.log("Image size after pixel resize: \(Double(imageData.count) / 1024 / 1024)MB")
+        
+        // Check if already under max size
+        if imageData.count <= maxSizeInBytes {
+            Logger.log("Image already under size limit")
+            return workingImage
+        }
+        
+        // Compress until the image is under maxSizeInBytes
+        while imageData.count > maxSizeInBytes && compression > step {
+            compression -= step
+            if let compressedData = workingImage.jpegData(compressionQuality: compression) {
+                imageData = compressedData
+            }
+        }
+        
+        if let finalImage = UIImage(data: imageData) {
+            Logger.log("Final compressed image size: \(Double(imageData.count) / 1024 / 1024)MB")
+            let finalPixels = Int(finalImage.size.width * finalImage.size.height)
+            Logger.log("Final pixel count: \(finalPixels)")
+            return finalImage
+        }
+        
+        Logger.log("Compression failed, returning working image")
+        return workingImage
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -38,8 +108,8 @@ struct ProcessPhotoView: View {
                 // Black background as bottom layer
                 Color.black
                     .edgesIgnoringSafeArea(.all)
-                
-                Image(uiImage: image)
+
+                Image(uiImage: compressedImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: geometry.size.width, height: geometry.size.height)
@@ -167,7 +237,7 @@ struct ProcessPhotoView: View {
         
         do {
             Logger.log("Compressing image if needed")
-            let compressedImage = compressImage(image, maxSizeInMB: 1.0)
+            
             
             Logger.log("Calling Stability AI API")
             let processed = try await AIService.generateArtFromImage(
@@ -187,62 +257,6 @@ struct ProcessPhotoView: View {
             Logger.log("Unexpected error: \(error)")
             errorMessage = "Unexpected error occurred"
         }
-    }
-    
-    private func compressImage(_ image: UIImage, maxSizeInMB: Double) -> UIImage {
-        let maxSizeInBytes = Int(maxSizeInMB * 1024 * 1024) // Convert MB to bytes
-        var compression: CGFloat = 1.0
-        let step: CGFloat = 0.1
-        
-        // Get initial data with maximum quality
-        guard var imageData = image.jpegData(compressionQuality: compression) else {
-            Logger.log("Failed to get image data, returning original image")
-            return image
-        }
-        
-        Logger.log("Original image size: \(Double(imageData.count) / 1024 / 1024)MB")
-        
-        // Check if already under max size
-        if imageData.count <= maxSizeInBytes {
-            Logger.log("Image already under size limit")
-            return image
-        }
-        
-        // Compress until the image is under maxSizeInBytes
-        while imageData.count > maxSizeInBytes && compression > step {
-            compression -= step
-            if let compressedData = image.jpegData(compressionQuality: compression) {
-                imageData = compressedData
-            }
-        }
-        
-        // If still too large, resize the image
-        if imageData.count > maxSizeInBytes {
-            Logger.log("Compression alone not sufficient, resizing image")
-            let scale = sqrt(Double(maxSizeInBytes) / Double(imageData.count))
-            let newSize = CGSize(
-                width: image.size.width * scale,
-                height: image.size.height * scale
-            )
-            
-            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-            let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
-            UIGraphicsEndImageContext()
-            
-            if let finalImage = resizedImage {
-                Logger.log("Image resized to: \(newSize)")
-                return finalImage
-            }
-        }
-        
-        if let finalImage = UIImage(data: imageData) {
-            Logger.log("Final compressed image size: \(Double(imageData.count) / 1024 / 1024)MB")
-            return finalImage
-        }
-        
-        Logger.log("Compression failed, returning original image")
-        return image
     }
     
     private func saveImageToAlbum(_ image: UIImage) {

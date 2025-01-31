@@ -23,7 +23,6 @@ struct ContentView: View {
                         }
                     }
                 
-                
                 // Initial Logo View
                 VStack {
                     Spacer()
@@ -74,7 +73,14 @@ struct ContentView: View {
                     //     .padding(.bottom, 8)
                 }
                 .opacity(showingMainContent ? 0 : 1)
-
+                
+                // White overlay for fade out effect (moved before permission content)
+                Color.white
+                    .opacity(fadeOutContent ? 1 : 0)
+                    .animation(.easeIn(duration: 0.5), value: fadeOutContent)
+                    .ignoresSafeArea(.all, edges: .all)
+                    .allowsHitTesting(false)  // Allow taps to pass through
+                
                 // Camera Permission Content
                 if showingMainContent {
                     Group {
@@ -95,12 +101,6 @@ struct ContentView: View {
                     }
                     .transition(.opacity)
                 }
-                
-                // White overlay for fade out effect (moved to end of ZStack)
-                Color.white
-                    .opacity(fadeOutContent ? 1 : 0)
-                    .animation(.easeIn(duration: 0.25), value: fadeOutContent)
-                    .ignoresSafeArea(.all, edges: .all)  // Updated to cover all edges
             }
             .navigationDestination(isPresented: $navigateToThemeSelect) {
                 ThemeSelectView()
