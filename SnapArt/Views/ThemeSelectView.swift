@@ -59,7 +59,12 @@ struct ThemeButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            let impactMed = UIImpactFeedbackGenerator(style: .light)
+            impactMed.impactOccurred()
+            action()
+            Logger.log("Button tapped: Theme selected: \(style.title), prompt: \(style.prompt)")
+        }) {
             VStack {
                 Text(style.title)
                     .font(.headline)

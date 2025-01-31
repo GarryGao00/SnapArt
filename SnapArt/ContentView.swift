@@ -30,6 +30,8 @@ struct ContentView: View {
                         .frame(width: 200, height: 200)
                         .cornerRadius(20)
                         .onTapGesture {
+                            let impactMed = UIImpactFeedbackGenerator(style: .medium)
+                            impactMed.impactOccurred()
                             Logger.log("Logo tapped, navigating to theme selection")
                             showHint = false  // Hide the hint text immediately
                             withAnimation(.easeOut(duration: 0.1)) {
@@ -56,12 +58,12 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    // Debug view for API key
-                    let prefix = APIKeys.stabilityKey.prefix(5)
-                    Text("API Key (debug): \(String(prefix))...")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .padding(.bottom, 8)
+                    // // Debug view for API key
+                    // let prefix = APIKeys.stabilityKey.prefix(5)
+                    // Text("API Key (debug): \(String(prefix))...")
+                    //     .font(.caption2)
+                    //     .foregroundColor(.gray)
+                    //     .padding(.bottom, 8)
                 }
                 .opacity(fadeOutContent ? 0 : 1)
                 .opacity(showingMainContent ? 0 : 1)

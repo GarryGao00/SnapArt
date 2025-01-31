@@ -42,21 +42,25 @@ struct TakePhotoView: View {
                         Spacer()
                         
                         // Decision buttons
-                        HStack(spacing: 50) {
+                        HStack(spacing: 100) {
                             Button(action: {
+                                let impact = UIImpactFeedbackGenerator(style: .light)
+                                impact.impactOccurred()
                                 viewModel.capturedImage = nil // Reset and retake
                             }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.red)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white)
                             }
                             
                             Button(action: {
+                                let impact = UIImpactFeedbackGenerator(style: .light)
+                                impact.impactOccurred()
                                 navigateToProcess = true
                             }) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.green)
+                                Image(systemName: "checkmark.square")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white)
                             }
                         }
                         .padding(.bottom, 50)
@@ -67,16 +71,24 @@ struct TakePhotoView: View {
                 VStack {
                     Spacer()
                     
-                    HStack(spacing: 50) {
+                    HStack(spacing: 70) {
                         // Photo library button
-                        Button(action: { showingImagePicker = true }) {
+                        Button(action: { 
+                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                            impact.impactOccurred()
+                            showingImagePicker = true 
+                        }) {
                             Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 30))
                                 .foregroundColor(.white)
                         }
                         
                         // Capture button
-                        Button(action: viewModel.capturePhoto) {
+                        Button(action: {
+                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                            impact.impactOccurred()
+                            viewModel.capturePhoto()
+                        }) {
                             Circle()
                                 .stroke(Color.white, lineWidth: 3)
                                 .frame(width: 70, height: 70)
